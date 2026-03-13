@@ -1,0 +1,135 @@
+version: '3.3'
+
+services:
+
+  db_users:
+    image: postgres
+    environment:
+      POSTGRES_DB: 'sd'
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'mysecretpassword'
+    volumes:
+      - postgres_data_users:/var/lib/postgresql/data/
+    ports:
+      - "5432:5432"
+    expose:
+      - 5432
+    networks:
+      djangonetwork:
+        ipv4_address: 192.168.21.3
+  
+  db_devices:
+    image: postgres
+    environment:
+      POSTGRES_DB: 'sd'
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'mysecretpassword'
+    volumes:
+      - postgres_data_devices:/var/lib/postgresql/data/
+    ports:
+      - "5433:5432"
+    expose:
+      - 5432
+    networks:
+      djangonetwork:
+        ipv4_address: 192.168.21.4
+  
+  db_monitoring:
+    image: postgres
+    environment:
+      POSTGRES_DB: 'sd'
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'mysecretpassword'
+    volumes:
+      - postgres_data_monitoring:/var/lib/postgresql/data/
+    ports:
+      - "5434:5432"
+    expose:
+      - 5432
+    networks:
+      djangonetwork:
+        ipv4_address: 192.168.21.5
+
+  users:
+    build: ./backend_user
+    ports:
+      - "8001:80"
+    expose:
+      - 80
+    depends_on:
+      - db_users
+    networks:
+      djangonetwork:
+        ipv4_address: 192.168.21.6
+
+  devices:
+    build: ./backend_device
+    ports:
+      - "8002:80"
+    expose:
+      - 80
+    depends_on:
+      - db_devices
+    networks:
+      djangonetwork:
+        ipv4_address: 192.168.21.7
+
+  monitoring:
+    build: ./backend_monitoring
+    ports:
+      - "8003:80"
+    expose:
+      - 80
+    depends_on:
+      - db_monitoring
+      - rabbitmq
+    networks:
+      djangonetwork:
+        ipv4_address: 192.168.21.8
+  
+  chats:
+    build: ./backend_chat
+    ports:
+      - "8004:80"
+    expose:
+      - 80
+    networks:
+      djangonetwork:
+        ipv4_address: 192.168.21.9
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - users
+      - devices
+      - monitoring
+      - chats
+    expose:
+      - 80
+    networks:
+      - djangonetwork
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    ports:
+      - "5671:5671"
+    expose:
+      - 5671
+    networks:
+      djangonetwork:
+        ipv4_address: 192.168.21.10
+
+
+volumes:
+  postgres_data_users:
+  postgres_data_devices:
+  postgres_data_monitoring:
+
+networks:
+  djangonetwork:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.21.0/24
